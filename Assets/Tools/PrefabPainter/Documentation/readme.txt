@@ -8,7 +8,7 @@ Usage
 General
 
 	* create container gameobject for the instantiated prefabs
-	* create an editor gameobject add the PrefabPainterEditor script to it
+	* create an editor gameobject add the PrefabPainter script to it
 	* in the inspector assign the container and a prefab to the prefab painter editor settings
 	* in scene view adjust the radius via ctrl + mouse wheel
 	* start painting prefabs by clicking left mouse button and dragging the mouse
