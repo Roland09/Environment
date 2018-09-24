@@ -6,3 +6,5 @@ Temp
 .vs
 *.sln
 *.csproj
+*.cache
+obj/Debug/build.force
