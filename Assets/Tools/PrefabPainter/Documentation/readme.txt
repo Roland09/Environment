@@ -37,3 +37,14 @@ Precondition: gameobject with PrefabPainterEditor script must be selected
 	* mouse drag: instantiate gameobjects
 
 	
+
+Credits
+-------------------------------------------------
+
+- Sebastian Lague
+  
+  Physics Simulation
+  https://www.youtube.com/watch?v=SnhfcdtGM2E
+
+  Patreon
+  https://www.patreon.com/SebastianLague

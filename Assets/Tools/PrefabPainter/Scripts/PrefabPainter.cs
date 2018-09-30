@@ -46,4 +46,19 @@ public class PrefabPainter : MonoBehaviour {
     /// Randomize Scale Maximum
     /// </summary>
     public float randomScaleMax = 1.5f;
+
+    /// <summary>
+    /// Instance of PhysicsSimulation.
+    /// Keeping the object here allows us to navigate away from the PrefabPainter gameobject
+    /// and return to it and keep the phyics settings. Otherwise the physics settings would always be reset
+    /// </summary>
+    [HideInInspector]
+    public PhysicsSimulation physicsSimulation;
+
+    /// <summary>
+    /// Container for copied positions and rotations
+    /// </summary>
+    [HideInInspector]
+    public Dictionary<int, Geometry> copyPasteGeometryMap = new Dictionary<int, Geometry>();
+
 }

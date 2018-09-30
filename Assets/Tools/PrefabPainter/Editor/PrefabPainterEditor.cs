@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.Linq;
 
 /// <summary>
 /// Prefab Painter allows you to paint prefabs in the scene
@@ -15,9 +16,15 @@ public class PrefabPainterEditor : Editor
     private Vector3 mousePos;
     private PrefabPainter gizmo;
 
-    private static Dictionary<int, Vector3> positionMap = new Dictionary<int, Vector3>();
-    private static Dictionary<int, Quaternion> rotationMap = new Dictionary<int, Quaternion>();
+    public void OnEnable()
+    {
+        this.gizmo = target as PrefabPainter;
 
+        if (this.gizmo.physicsSimulation == null)
+        {
+            this.gizmo.physicsSimulation = ScriptableObject.CreateInstance<PhysicsSimulation>();
+        }
+    }
     public override void OnInspectorGUI()
     {
 
@@ -31,16 +38,24 @@ public class PrefabPainterEditor : Editor
         // separator
         addGUISeparator();
 
-        // rigidbody add/remove
-        if (GUILayout.Button("Add RigidBody"))
+        EditorGUILayout.LabelField("Physics Settings");
+        // EditorGUI.indentLevel++;
+
+        this.gizmo.physicsSimulation.maxIterations = EditorGUILayout.IntField("Max Iterations", this.gizmo.physicsSimulation.maxIterations);
+        this.gizmo.physicsSimulation.forceMinMax = EditorGUILayout.Vector2Field("Force Min/Max", this.gizmo.physicsSimulation.forceMinMax);
+        this.gizmo.physicsSimulation.forceAngleInDegrees = EditorGUILayout.FloatField("Force Angle (Degrees)", this.gizmo.physicsSimulation.forceAngleInDegrees);
+        this.gizmo.physicsSimulation.randomizeForceAngle = EditorGUILayout.Toggle("Randomize Force Angle", this.gizmo.physicsSimulation.randomizeForceAngle);
+
+        EditorGUI.indentLevel--;
+
+        if (GUILayout.Button("Run Simulation"))
         {
-            Debug.Log("Add RigidBody");
-            AddRigidBody();
+            RunSimulation();
         }
-        else if (GUILayout.Button("Remove RigidBody"))
+
+        if (GUILayout.Button("Undo Last Simulation"))
         {
-            Debug.Log("Remove RigidBody");
-            RemoveRigidBody();
+            ResetAllBodies();
         }
 
         // separator
@@ -49,14 +64,13 @@ public class PrefabPainterEditor : Editor
         // transform copy/paste
         if (GUILayout.Button("Copy Transforms"))
         {
-            Debug.Log("Copy Transforms");
             CopyTransforms();
         }
-        else if (GUILayout.Button("Apply Copied Transforms"))
+        else if (GUILayout.Button("Paste Transforms"))
         {
-            Debug.Log("Apply Copied Transforms");
-            ApplyCopiedTransforms();
+            PasteTransforms();
         }
+
 
         // separator
         addGUISeparator();
@@ -64,10 +78,10 @@ public class PrefabPainterEditor : Editor
         // draw custom components
         if (GUILayout.Button("Remove Container Children"))
         {
-            Debug.Log("Remove Container Children");
             RemoveContainerChildren();
         }
     }
+
 
     private void addGUISeparator()
     {
@@ -187,7 +201,19 @@ public class PrefabPainterEditor : Editor
         return gizmo.container.transform.childCount;
 
     }
-    // example about how to show info in the ui
+
+
+    private Transform[] getContainerChildren()
+    {
+        if (gizmo.container == null)
+            return new Transform[0];
+
+        Transform[] children = gizmo.container.transform.Cast<Transform>().ToArray();
+
+        return children;
+    }
+
+    // show info in the ui
     private void ShowGuiInfo()
     {
 
@@ -227,6 +253,8 @@ public class PrefabPainterEditor : Editor
 
         GUI.backgroundColor = defaultColor;
     }
+
+    #region Paint Prefabs
 
     /// <summary>
     /// Check if the distance 
@@ -287,112 +315,9 @@ public class PrefabPainterEditor : Editor
         }
     }
 
-    private void AddRigidBody()
-    {
-        GameObject container = gizmo.container as GameObject;
+    #endregion Paint Prefabs
 
-        foreach (Transform child in container.transform)
-        {
-            GameObject go = child.gameObject;
-
-            if (go.GetComponent<Rigidbody>() != null)
-                continue;
-
-            // add Rigidbody
-            Rigidbody rb = go.AddComponent<Rigidbody>();
-
-            // set Rigidbody parameters
-            rb.useGravity = true;
-            rb.mass = 1;
-        }
-    }
-
-    private void RemoveRigidBody()
-    {
-        GameObject container = gizmo.container as GameObject;
-
-        foreach (Transform child in container.transform)
-        {
-            GameObject go = child.gameObject;
-
-            Rigidbody rb = go.GetComponent<Rigidbody>();
-
-            if (rb == null)
-                continue;
-
-            DestroyImmediate( rb);
-            
-        }
-    }
-    
-        
-    private void CopyTransforms()
-    {
-        positionMap.Clear();
-        rotationMap.Clear();
-
-        GameObject container = gizmo.container as GameObject;
-
-        foreach (Transform child in container.transform)
-        {
-            GameObject go = child.gameObject;
-
-            if (go == null)
-                continue;
-
-            Debug.Log("Copying: " + go.GetInstanceID());
-
-            positionMap.Add(go.GetInstanceID(), go.transform.position);
-            rotationMap.Add(go.GetInstanceID(), go.transform.rotation);
-
-        }
-
-        // logging
-        Debug.Log("positionMap size: " + positionMap.Keys.Count);
-        foreach (Vector3 position in positionMap.Values)
-        {
-            Debug.Log("position: " + position);
-        }
-    }
-
-    private void ApplyCopiedTransforms()
-    {
-        // logging
-        Debug.Log("positionMap size: " + positionMap.Keys.Count);
-        foreach( Vector3 position in positionMap.Values) {
-            Debug.Log("position: " + position);
-        }
-
-        GameObject container = gizmo.container as GameObject;
-
-        foreach (Transform child in container.transform)
-        {
-            GameObject go = child.gameObject;
-
-            if (go == null)
-                continue;
-
-            Debug.Log("Applying: " + go.GetInstanceID());
-
-            Vector3 position = Vector3.zero;
-
-            if(positionMap.TryGetValue( go.GetInstanceID(), out position))
-            {
-                // Debug.Log("Apply postion: " + go.GetInstanceID());
-                go.transform.position = position;
-            }
-
-            Quaternion rotation = Quaternion.identity;
-
-            if (rotationMap.TryGetValue(go.GetInstanceID(), out rotation))
-            {
-                // Debug.Log("Apply rotation: " + go.GetInstanceID());
-                go.transform.rotation = rotation;
-            }
-
-
-        }
-    }
+    #region Remove Container Children
 
     private void RemoveContainerChildren()
     {
@@ -412,4 +337,75 @@ public class PrefabPainterEditor : Editor
 
         }
     }
+
+    #endregion Remove Container Children
+
+    #region Physics Simulation
+
+    private void RunSimulation()
+    {
+
+        this.gizmo.physicsSimulation.RunSimulation( getContainerChildren());
+
+    }
+
+    private void ResetAllBodies()
+    {
+        this.gizmo.physicsSimulation.UndoSimulation();
+    }
+
+    #endregion Physics Simulation
+
+
+    #region Copy/Paste Transforms
+
+    private void CopyTransforms()
+    {
+        gizmo.copyPasteGeometryMap.Clear();
+
+        GameObject container = gizmo.container as GameObject;
+
+        foreach (Transform child in container.transform)
+        {
+            GameObject go = child.gameObject;
+
+            if (go == null)
+                continue;
+
+            gizmo.copyPasteGeometryMap.Add(go.GetInstanceID(), new Geometry( go.transform));
+
+        }
+
+        // logging
+        Debug.Log("Copying transforms & rotations: " + gizmo.copyPasteGeometryMap.Keys.Count);
+    }
+
+
+    private void PasteTransforms()
+    {
+        // logging
+        Debug.Log("Pasting transforms & rotations: " + gizmo.copyPasteGeometryMap.Keys.Count);
+        
+        GameObject container = gizmo.container as GameObject;
+
+        foreach (Transform child in container.transform)
+        {
+            GameObject go = child.gameObject;
+
+            if (go == null)
+                continue;
+
+            Geometry geometry = null;
+
+            if (gizmo.copyPasteGeometryMap.TryGetValue(go.GetInstanceID(), out geometry))
+            {
+                go.transform.position = geometry.getPosition();
+                go.transform.rotation = geometry.getRotation();
+            }
+
+        }
+    }
+
+    #endregion Copy/Paste Transforms
+
 }
