@@ -79,6 +79,9 @@ public class PhysicsSimulation : ScriptableObject {
             if (!child.GetComponent<Collider>())
             {
                 MeshCollider collider = child.gameObject.AddComponent<MeshCollider>();
+
+                collider.convex = true;
+
                 generatedColliders.Add( collider);
             }
         }
